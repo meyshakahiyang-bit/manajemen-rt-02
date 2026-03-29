@@ -175,7 +175,22 @@
     50% { opacity: 1; }
     100% { opacity: 0.3; }
 }
+/* Input kosong = tanda X merah */
+.input-tabungan.kosong::placeholder {
+    color: #ef4444;
+    font-weight: bold;
+    text-align: center;
+}
 
+/* Saat ada isi kembali normal */
+.input-tabungan {
+    text-align: center;
+}
+
+/* Efek fokus */
+.input-tabungan:focus::placeholder {
+    opacity: 0.3;
+}
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.
 
@@ -705,12 +720,29 @@ if(type === 'kas' && !r.nama.startsWith("OUT:")) {
         <input type="text" 
             inputmode="numeric" 
             pattern="[0-9.]*"
-            value="${vTampil ? formatRupiah(vTampil) : ''}" 
+            value="${vTampil ? formatRupiah(vTampil) : ''}"
+placeholder="✖"
+class="input-tabungan ${vTampil ? '' : 'kosong'}"
             ${!isAdmin ? 'disabled' : ''} 
             style="width: 70px; height: 30px; background: #0f172a; border: 1px solid #334155; color: #fff; text-align: center; border-radius: 6px; font-size: 12px; margin: 0 auto; display: block;" 
             onkeydown="if(event.key==='Enter'){ this.blur(); }"
-            oninput="this.value = formatRupiah(this.value.replace(/\\./g, ''))"
-            onchange="let valMurni = this.value.replace(/\\./g,''); updVal('tabungan', ${ri}, ${i}, valMurni ? parseInt(valMurni) : 0)">
+            <input type="text" 
+    class="input-tabungan"
+    value="${vTampil ? formatRupiah(vTampil) : ''}" 
+    placeholder="${vTampil ? '' : '✖'}"
+    ${!isAdmin ? 'disabled' : ''} 
+    style="width: 70px; height: 30px; background: #0f172a; border: 1px solid #334155; color: #fff; text-align: center; border-radius: 6px; font-size: 12px; margin: 0 auto; display: block;" 
+    
+    onfocus="this.placeholder=''"
+    
+    onblur="if(!this.value){ this.placeholder='✖'; this.value=''; }"
+    
+    oninput="this.value = formatRupiah(this.value.replace(/\\./g, ''))"
+    
+    onchange="
+        let valMurni = this.value.replace(/\\./g,''); 
+        updVal('tabungan', ${ri}, ${i}, valMurni ? parseInt(valMurni) : 0)
+    ">
     </td>`;
 }
             else {
