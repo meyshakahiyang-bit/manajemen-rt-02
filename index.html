@@ -191,6 +191,13 @@
 .input-tabungan:focus::placeholder {
     opacity: 0.3;
 }
+.input-tabungan.nol {
+    color: #ef4444 !important;
+}
+.input-tabungan.nol {
+    color: #ef4444 !important;
+    opacity: 0.8;
+}
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.
 
@@ -224,7 +231,8 @@
 
         <!-- SEARCH -->
         <input type="text" id="searchInput" placeholder="Cari warga..."
-            oninput="renderAll()"
+            oninput="renderAll(oninput="
+this.classList.toggle('nol', replace(/\./g,'')
             style="flex:1; border-radius:20px; padding:6px 12px; font-size:12px; margin:0;">
 
         <!-- BULAN -->
@@ -720,9 +728,9 @@ if(type === 'kas' && !r.nama.startsWith("OUT:")) {
         <input type="text" 
             inputmode="numeric" 
             pattern="[0-9.]*"
-            value="${vTampil ? formatRupiah(vTampil) : ''}"
-placeholder="✖"
-class="input-tabungan ${vTampil ? '' : 'kosong'}"
+            value="${vTampil ? formatRupiah(vTampil) : '0'}"
+class="input-tabungan ${!vTampil ? 'nol' : ''}"
+
             ${!isAdmin ? 'disabled' : ''} 
             style="width: 70px; height: 30px; background: #0f172a; border: 1px solid #334155; color: #fff; text-align: center; border-radius: 6px; font-size: 12px; margin: 0 auto; display: block;" 
             onkeydown="if(event.key==='Enter'){ this.blur(); }"
@@ -735,10 +743,13 @@ class="input-tabungan ${vTampil ? '' : 'kosong'}"
     
     onfocus="this.placeholder=''"
     
-    onblur="if(!this.value){ this.placeholder='✖'; this.value=''; }"
-    
-    oninput="this.value = formatRupiah(this.value.replace(/\\./g, ''))"
-    
+    onblur="
+if(!this.value){
+    this.value='0';
+}
+let angka = this.value.replace(/\\./g,'');
+this.classList.toggle('nol', angka == 0);
+"
     onchange="
         let valMurni = this.value.replace(/\\./g,''); 
         updVal('tabungan', ${ri}, ${i}, valMurni ? parseInt(valMurni) : 0)
