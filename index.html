@@ -194,24 +194,34 @@
 .input-tabungan.nol {
     color: #ef4444 !important;
 }
+
 .input-tabungan.nol {
-    color: #ef4444 !important;
-    opacity: 0.8;
+    opacity: 0.7;
+}
+/* Membuat placeholder angka 0 terlihat seperti angka biasa tapi tipis */
+.input-tabungan::placeholder {
+    color: var(--text-dim);
+    opacity: 0.5;
+    font-size: 10px;
+}
+
+/* Saat di klik (focus), kotak input harus bersih total */
+.input-tabungan:focus::placeholder {
+    color: transparent;
+}
+
+/* Menghilangkan border biru bawaan HP saat klik agar tetap estetik */
+.input-tabungan:focus {
+    outline: none;
+    background: rgba(255,255,255,0.05);
 }
     </style>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.
-
-    </style>
-
    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
-
     <header class="top-section">
-
  <div class="topbar-wrapper">
     <div class="topbar-main">
         <div onclick="toggleSidebar()" class="menu-btn">☰</div>
@@ -232,7 +242,8 @@
         <!-- SEARCH -->
         <input type="text" id="searchInput" placeholder="Cari warga..."
             oninput="renderAll(oninput="
-this.classList.toggle('nol', replace(/\./g,'')
+this.classList.toggle('nol', this.value === '0' || this.value === '');
+")"
             style="flex:1; border-radius:20px; padding:6px 12px; font-size:12px; margin:0;">
 
         <!-- BULAN -->
@@ -290,6 +301,17 @@ this.classList.toggle('nol', replace(/\./g,'')
     <div class="sidebar-item" onclick="exportExcel()"><span>📄</span> Export Excel</div>
     
 <div class="sidebar-item" onclick="backupPDF()"><span>🖨️</span> Backup PDF Otomatis</div>
+<div style="margin-top: 20px; border-top: 1px solid #334155; padding-top: 10px;">
+    <!-- KODE TOMBOL PERBAIKAN (Copy-Paste ini menggantikan kode lama) -->
+<div style="position: relative; z-index: 9999; margin-top: 20px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 8px;">
+    <button onclick="syncBalanceToNextMonth(); event.stopPropagation();" 
+        style="width:100%; padding:12px; background:#2563eb; border:none; border-radius:6px; color:white; font-weight:bold; cursor:pointer; position: relative; z-index: 10000; display: block; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">
+        🔄 SINKRONISASI SALDO
+    </button>
+    <div style="font-size:10px; color:#cbd5e1; text-align:center; margin-top:5px; pointer-events: none;">
+        Membawa sisa saldo ke bulan depan
+    </div>
+</div>
 
     <div class="sidebar-item" onclick="openModal('resetOverlay')" style="color:var(--accent-red)"><span>⚠️</span> Reset Aplikasi</div>
     
@@ -641,7 +663,7 @@ function renderDashboard() {
         }
 
         return `
-        <div class="history-row" style="display: flex; align-items: center; padding: 12px 8px; border-bottom: 1px solid rgba(255,255,255,0.05); background: rgba(255,255,255,0.02); margin-bottom: 4px; border-radius: 8px;">
+        <div class="history-row" style="display: flex; align-items: center; padding: 12p 8p; border-bottom: 1p solid rgba(255,255,255,0.05); background: rgba(255,255,255,0.02); margin-bottom: 4p; border-radius: 8px;">
             <div style="width: 25px; font-size: 9px; color: var(--text-dim); flex-shrink: 0;">${index + 1}.</div>
             
             <div style="width: 25%; font-size: 10px; color: var(--accent-gold); font-weight: bold;">
@@ -1109,40 +1131,46 @@ function scrollToToday() {
 
 // Fungsi untuk memicu jendela pemilihan file dengan proteksi PIN
 function triggerLoadData() {
-    // Cek apakah sudah login admin, jika belum minta PIN dulu
+    // 1. Cek apakah status sudah Login Admin
     if (!isAdmin) {
         openModal('adminOverlay');
         return;
     }
-
-    if (confirm("⚠️ PERINGATAN: Mengunggah data baru akan MENGHAPUS & MENIMPA data yang ada saat ini. Pastikan file backup Anda benar. Lanjutkan?")) {
-        const fileInput = document.getElementById('fileInput');
-fileInput.value = "";
-fileInput.click();
+    
+    // 2. Jika sudah Admin, panggil jendela pilih file
+    const fileEl = document.getElementById('fileInput');
+    if (fileEl) {
+        fileEl.click();
+    } else {
+        alert("Sistem Error: Elemen input file tidak ditemukan.");
     }
 }
-
 function handleLoadData(e) {
-    if (confirm("⚠️ PERINGATAN: Mengunggah data baru akan MENGGANTI seluruh data yang ada saat ini. Lanjutkan?")) {
-        const r = new FileReader();
-        r.onload = (ev) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (confirm("⚠️ PERINGATAN: Mengunggah data baru akan MENGGANTI seluruh data yang ada. Lanjutkan?")) {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
             try {
                 const importedData = JSON.parse(ev.target.result);
+                
+                // Validasi struktur data RT 02/19
                 if (importedData.kas && importedData.tabungan) {
                     db = importedData;
-                    save();
-                    renderAll();
-                    alert("✅ Data berhasil dipulihkan (Restore).");
+                    save();      // Simpan ke LocalStorage
+                    renderAll(); // Refresh tampilan dashboard
+                    alert("✅ Restore Berhasil! Data warga telah diperbarui.");
                 } else {
-                    alert("Format file tidak valid!");
+                    alert("Gagal: Format file Backup tidak dikenali.");
                 }
             } catch (err) {
-                alert("Gagal membaca file!");
+                alert("Gagal membaca file: Pastikan file berupa format .json");
             }
         };
-        r.readAsText(e.target.files[0]);
+        reader.readAsText(file);
     }
-    // Reset input file agar bisa memilih file yang sama lagi jika perlu
+    // Reset input agar bisa upload file yang sama berkali-kali
     e.target.value = '';
 }
 
@@ -1367,6 +1395,228 @@ window.backupPDF = async function() {
         alert("Gagal: " + e.message);
     }
 };
+function exportData() {
+    const dataStr = JSON.stringify(db, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
+    
+    const exportFileDefaultName = `BACKUP_RT0219_${new Date().toLocaleDateString()}.json`;
+    
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
+    
+    alert("✅ File Backup (.json) berhasil dibuat.");
+}
+// --- 1. FUNGSI BACKUP (Simpan ke File .json) ---
+function backupData() {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db));
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", "backup_rt_omega_" + new Date().toLocaleDateString() + ".json");
+    document.body.appendChild(downloadAnchorNode);
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
+    alert("Backup Berhasil Diunduh!");
+}
+
+// --- 2. FUNGSI LOAD (Ambil dari File .json) ---
+function loadData() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = e => {
+        const file = e.target.files[0];
+        const reader = new FileReader();
+        reader.readAsText(file, 'UTF-8');
+        reader.onload = readerEvent => {
+            try {
+                const content = JSON.parse(readerEvent.target.result);
+                if (content.kas && content.tabungan) {
+                    if (confirm("Timpa data saat ini dengan data backup?")) {
+                        db = content;
+                        save(); // Simpan ke LocalStorage/Firebase
+                        renderAll();
+                        alert("Data Berhasil Dimuat!");
+                    }
+                } else {
+                    alert("Format file backup tidak sesuai.");
+                }
+            } catch (err) {
+                alert("Gagal membaca file: " + err);
+            }
+        }
+    }
+    input.click();
+}
+
+// --- 3. EXPORT EXCEL (Menggunakan library XLSX) ---
+function exportExcel() {
+    const wb = XLSX.utils.book_new();
+    
+    // Sheet Kas
+    const wsKas = XLSX.utils.json_to_sheet(db.kas.map(r => ({ Nama: r.nama, ...r.history })));
+    XLSX.utils.book_append_sheet(wb, wsKas, "Data Kas");
+
+    // Sheet Tabungan
+    const wsTab = XLSX.utils.json_to_sheet(db.tabungan.map(r => ({ Nama: r.nama, ...r.history })));
+    XLSX.utils.book_append_sheet(wb, wsTab, "Data Tabungan");
+
+    XLSX.writeFile(wb, "LAPORAN_RT_OMEGA.xlsx");
+}
+
+// --- 4. EXPORT PDF (Dengan Konfirmasi Batal) ---
+function exportPDF() {
+    const tanya = confirm("Apakah Anda ingin mencetak laporan PDF sekarang?");
+    if (!tanya) {
+        console.log("Cetak PDF dibatalkan oleh pengguna.");
+        return; // Keluar dari fungsi jika klik Batal
+    }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('l', 'mm', 'a4'); // Posisi Landscape agar muat banyak kolom
+    
+    const buatHalaman = (tipe) => {
+        const bln = document.getElementById("bulan").value;
+        const thn = document.getElementById("tahun").value;
+        
+        doc.setFontSize(16);
+        doc.text(`LAPORAN ${tipe.toUpperCase()} - RT 02/19`, 14, 15);
+        doc.setFontSize(10);
+        doc.text(`Periode: ${bln} / ${thn}`, 14, 22);
+
+        const columns = ["NO", "NAMA"];
+        const daysInMonth = new Date(thn, parseInt(bln) + 1, 0).getDate();
+        for (let i = 1; i <= daysInMonth; i++) columns.push(i.toString());
+        columns.push("TOTAL");
+
+        const rows = db[tipe].map((r, index) => {
+            const key = `${thn}_${bln}`;
+            let rowData = [index + 1, r.nama];
+            let total = 0;
+            for (let i = 0; i < daysInMonth; i++) {
+                let v = (r.history && r.history[key]) ? r.history[key][i] || 0 : 0;
+                rowData.push(v !== 0 ? v.toLocaleString('id-ID') : "-");
+                total += v;
+            }
+            rowData.push(total.toLocaleString('id-ID'));
+            return rowData;
+        });
+
+        doc.autoTable({
+            head: [columns],
+            body: rows,
+            startY: 30,
+            theme: 'grid',
+            styles: { fontSize: 6, cellPadding: 1 },
+            headStyles: { fillColor: [30, 41, 59] }
+        });
+    };
+
+    try {
+        buatHalaman('kas');
+        doc.addPage();
+        buatHalaman('tabungan');
+        doc.save(`LAPORAN_RT_${new Date().getTime()}.pdf`);
+        alert("PDF Berhasil Dibuat!");
+    } catch (e) {
+        alert("Gagal membuat PDF: " + e.message);
+    }
+}
+function hitungSaldoLalu(wargaIndex, tahunSekarang, bulanSekarang) {
+    let totalLalu = 0;
+    const warga = db.tabungan[wargaIndex];
+    if (!warga.history) return 0;
+
+    Object.keys(warga.history).forEach(key => {
+        const [thn, bln] = key.split('_').map(Number);
+        // Hitung hanya jika tahun & bulan lebih lampau dari yang dibuka sekarang
+        if (thn < tahunSekarang || (thn === tahunSekarang && bln < bulanSekarang)) {
+            warga.history[key].forEach(val => {
+                totalLalu += (val || 0);
+            });
+        }
+    });
+    return totalLalu;
+}
+function syncBalanceToNextMonth() {
+    // Cek apakah database sudah dimuat
+    if (typeof db === 'undefined' || !db.tabungan) {
+        alert("Data belum siap dimuat. Silakan refresh halaman.");
+        return;
+    }
+
+    const tahunEl = document.getElementById('tahun');
+    const bulanEl = document.getElementById('bulan');
+    
+    if (!tahunEl || !bulanEl) {
+        alert("Error: Dropdown Tahun/Bulan tidak ditemukan!");
+        return;
+    }
+
+    const currentYear = parseInt(tahunEl.value);
+    const currentMonth = parseInt(bulanEl.value);
+    
+    let targetMonth = currentMonth + 1;
+    let targetYear = currentYear;
+    
+    if (targetMonth > 11) {
+        targetMonth = 0;
+        targetYear++;
+    }
+    
+    const targetKey = `${targetYear}_${targetMonth}`;
+    const sourceKey = `${currentYear}_${currentMonth}`;
+    
+    let countSynced = 0;
+    let totalAmountSynced = 0;
+
+    db.tabungan.forEach((warga, index) => {
+        if (warga.nama.startsWith("OUT:")) return;
+
+        let currentBalance = 0;
+        if (warga.history && warga.history[sourceKey]) {
+            currentBalance = warga.history[sourceKey].reduce((a, b) => a + (b || 0), 0);
+        }
+
+        if (currentBalance !== 0) {
+            if (!warga.history) warga.history = {};
+            if (!warga.history[targetKey]) {
+                warga.history[targetKey] = new Array(31).fill(0);
+            }
+            
+            warga.history[targetKey][0] += currentBalance;
+            countSynced++;
+            totalAmountSynced += currentBalance;
+        }
+    });
+
+    if (countSynced === 0) {
+        alert(`Tidak ada saldo untuk disinkronisasi dari bulan ini.`);
+    } else {
+        save(); 
+        renderAll(); 
+        alert(`✅ BERHASIL!\n\n${countSynced} warga disinkronisasi.\nTotal: ${formatRupiah(totalAmountSynced)}\nSilakan ganti bulan ke bulan berikutnya.`);
+    }
+}
+// Pastikan nama fungsinya "handleLoadData" agar nyambung dengan input di atas
+function handleLoadData(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const data = JSON.parse(e.target.result);
+            db = data;
+            saveDb();
+            renderAll();
+            alert("Data Berhasil Dimuat!");
+        } catch (err) {
+            alert("Gagal memuat file backup.");
+        }
+    };
+    reader.readAsText(file);
+}
 </script>
 <input type="file" id="fileInput" style="display:none;" accept=".json" onchange="handleLoadData(event)">
 </body>
