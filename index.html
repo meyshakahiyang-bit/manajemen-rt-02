@@ -299,15 +299,7 @@
 <div style="margin-top: 20px; border-top: 1px solid #334155; padding-top: 10px;">
     <!-- KODE TOMBOL PERBAIKAN (Copy-Paste ini menggantikan kode lama) -->
 <div style="position: relative; z-index: 9999; margin-top: 20px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 8px;">
-    <button onclick="syncBalanceToNextMonth(); event.stopPropagation();" 
-        style="width:100%; padding:12px; background:#2563eb; border:none; border-radius:6px; color:white; font-weight:bold; cursor:pointer; position: relative; z-index: 10000; display: block; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">
-        🔄 SINKRONISASI SALDO
-    </button>
-    <div style="font-size:10px; color:#cbd5e1; text-align:center; margin-top:5px; pointer-events: none;">
-        Membawa sisa saldo ke bulan depan
-    </div>
-</div>
-
+   
     <div class="sidebar-item" onclick="openModal('resetOverlay')" style="color:var(--accent-red)"><span>⚠️</span> Reset Aplikasi</div>
     
 <button class="btn-gold" style="margin-top:30px; background:#334155; color:white;" onclick="logoutAdmin()">LOGOUT</button>
@@ -708,20 +700,26 @@ h += `<th class="st-right">TOTAL</th></tr></thead><tbody>`;
 db[type].forEach((r, ri) => {
     if(!r.nama.toUpperCase().includes(search)) return;
 
-    let rS = 0; // Total per bulan ini
-    let totalGabungan = 0; // Total seluruh bulan (Saldo Akhir)
+    let rS = 0; // Total khusus bulan yang sedang dibuka
+    let totalGabungan = 0; // Saldo Akumulasi (Januari + Februari + dst)
 
-    // Logika Hitung Saldo Gabungan (Khusus Tabungan)
-    if (type === 'tabungan') {
-        // 1. Hitung semua saldo di semua history yang ada
-        if (r.history) {
-            Object.values(r.history).forEach(bulanArr => {
-                bulanArr.forEach(val => {
-                    totalGabungan += (val || 0);
+    // LOGIKA PENJUMLAHAN AKUMULASI
+    if (type === 'tabungan' && r.history) {
+        // Mengambil semua data dari semua bulan yang pernah diinput
+        Object.keys(r.history).forEach(key => {
+            const dataBulan = r.history[key];
+            if (Array.isArray(dataBulan)) {
+                dataBulan.forEach(nominal => {
+                    totalGabungan += (Number(nominal) || 0);
                 });
-            });
-        }
+            }
+        });
+
+        // ANTI-MINUS: Jika ditarik (minus) sampai habis, jangan muncul angka negatif
+        if (totalGabungan < 0) totalGabungan = 0;
     }
+
+    // ... sisa kode looping tanggal ...
 
     h += `<tr><td class="st-left-1">${ri+1}</td><td class="st-left-2">${r.nama}</td>`;
 
@@ -766,8 +764,8 @@ else if(type === 'tabungan' && !r.nama.startsWith("OUT:")) {
     // --- PERUBAHAN TAMPILAN KOLOM TOTAL ---
     if (type === 'tabungan' && !r.nama.startsWith("OUT:")) {
         h += `<td class="st-right" style="line-height: 1.2; padding: 5px 8px;">
-                <div style="font-size: 10px; color: var(--accent-green);">Bln: ${rS.toLocaleString()}</div>
-                <div style="font-size: 11px; color: var(--accent-gold); border-top: 1px solid rgba(212,175,55,0.2); margin-top: 3px; padding-top: 3px;">Total: ${totalGabungan.toLocaleString()}</div>
+                <div style="font-size: 10px; color: var(--accent-green);">Rp.${rS.toLocaleString()}</div>
+                <div style="font-size: 11px; color: var(--accent-gold); border-top: 1px solid rgba(212,175,55,0.2); margin-top: 3px; padding-top: 3px;">Saldo: ${totalGabungan.toLocaleString()}</div>
               </td></tr>`;
     } else {
         h += `<td class="st-right">Rp. ${rS.toLocaleString()}</td></tr>`;
