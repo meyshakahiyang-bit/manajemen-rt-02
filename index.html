@@ -193,9 +193,6 @@
 }
 .input-tabungan.nol {
     color: #ef4444 !important;
-}
-
-.input-tabungan.nol {
     opacity: 0.7;
 }
 /* Membuat placeholder angka 0 terlihat seperti angka biasa tapi tipis */
@@ -241,9 +238,7 @@
 
         <!-- SEARCH -->
         <input type="text" id="searchInput" placeholder="Cari warga..."
-            oninput="renderAll(oninput="
-this.classList.toggle('nol', this.value === '0' || this.value === '');
-")"
+            oninput="renderAll(); this.classList.toggle('nol', this.value === '0' || this.value === '');"
             style="flex:1; border-radius:20px; padding:6px 12px; font-size:12px; margin:0;">
 
         <!-- BULAN -->
@@ -434,7 +429,7 @@ this.classList.toggle('nol', this.value === '0' || this.value === '');
         // --- CORE DATA ---
         let isAdmin = false;
         let db;
-
+let search = "";
 try {
     db = JSON.parse(localStorage.getItem('rt_v4_final')) || { kas: [], tabungan: [] };
 } catch {
@@ -530,8 +525,7 @@ if (t === 'dash') {
 }
 function renderDashboard() {
     let sK = 0, sT = 0, outK = 0, outT = 0;
-    const search = (document.getElementById("searchInput")?.value || "").toUpperCase();
-
+    
     // 1. HITUNG SALDO & PENGELUARAN
     if (db && db.kas) {
         db.kas.forEach(r => {
@@ -690,10 +684,7 @@ function renderDashboard() {
     const selectedYear = (tahunEl && tahunEl.value) ? parseInt(tahunEl.value) : new Date().getFullYear();
 
     const dCount = new Date(selectedYear, bln + 1, 0).getDate();
-    const search = document.getElementById("searchInput").value.toUpperCase();
-
     let dTot = Array(dCount).fill(0), gTot = 0;
-
     // Bagian Header Tabel
 let h = `<table><thead><tr>
     <th class="st-left-1">NO</th>
@@ -713,79 +704,76 @@ for(let i=1; i<=dCount; i++) {
 }
 h += `<th class="st-right">TOTAL</th></tr></thead><tbody>`;
 
-    db[type].forEach((r, ri) => {
-        if(!r.nama.toUpperCase().includes(search)) return;
+    // --- BAGIAN DI DALAM LOOPING db[type].forEach ---
+db[type].forEach((r, ri) => {
+    if(!r.nama.toUpperCase().includes(search)) return;
 
-        let rS = 0;
-        // Pastikan hanya baris ini yang ada untuk bagian nama di tabel utama
-h += `<tr><td class="st-left-1">${ri+1}</td><td class="st-left-2">${r.nama}</td>`;
+    let rS = 0; // Total per bulan ini
+    let totalGabungan = 0; // Total seluruh bulan (Saldo Akhir)
 
-        for(let i=0; i<dCount; i++){
-const thn = document.getElementById("tahun")?.value || new Date().getFullYear();
+    // Logika Hitung Saldo Gabungan (Khusus Tabungan)
+    if (type === 'tabungan') {
+        // 1. Hitung semua saldo di semua history yang ada
+        if (r.history) {
+            Object.values(r.history).forEach(bulanArr => {
+                bulanArr.forEach(val => {
+                    totalGabungan += (val || 0);
+                });
+            });
+        }
+    }
 
-const key = `${thn}_${bln}`;
+    h += `<tr><td class="st-left-1">${ri+1}</td><td class="st-left-2">${r.nama}</td>`;
 
-let v = 0;
-if (db[type][ri].history && db[type][ri].history[key]) {
-    v = db[type][ri].history[key][i] || 0;
-}
+    for(let i=0; i<dCount; i++){
+        const thn = document.getElementById("tahun")?.value || new Date().getFullYear();
+        const key = `${thn}_${bln}`;
+        let v = 0;
+        if (db[type][ri].history && db[type][ri].history[key]) {
+            v = db[type][ri].history[key][i] || 0;
+        }
 
-// 🔥 SALDO tetap pakai nilai asli (biar berkurang saat penarikan)
-rS += v;
-dTot[i] += v;
+        rS += v;
+        dTot[i] += v;
+        
+        let vTampil = v > 0 ? v : 0;
 
-// 🔥 TAMPILAN dibuat aman (tidak ikut minus)
-let vTampil = v > 0 ? v : 0;
-
-// 3. Tampilkan input (Kode sisa ke bawah tetap sama)
-if(type === 'kas' && !r.nama.startsWith("OUT:")) {
-    // ... kode checkbox ...
-}
-
-            if(type === 'kas' && !r.nama.startsWith("OUT:")) {
-                h += `<td><input type="checkbox" class="check-kas-view" ${v > 0 ? 'checked' : ''} ${!isAdmin ? 'disabled' : ''} onchange="updVal('kas',${ri},${i},this.checked?500:0)"></td>`;
-            }
-           else if(type === 'tabungan' && !r.nama.startsWith("OUT:")) {
+        if(type === 'kas' && !r.nama.startsWith("OUT:")) {
+            h += `<td><input type="checkbox" class="check-kas-view" ${v > 0 ? 'checked' : ''} ${!isAdmin ? 'disabled' : ''} onchange="updVal('kas',${ri},${i},this.checked?500:0)"></td>`;
+        }
+        // Cari bagian ini di renderTable:
+else if(type === 'tabungan' && !r.nama.startsWith("OUT:")) {
     h += `<td style="padding: 0; min-width: 85px; vertical-align: middle;">
         <input type="text" 
-            inputmode="numeric" 
-            pattern="[0-9.]*"
-            value="${vTampil ? formatRupiah(vTampil) : '0'}"
-class="input-tabungan ${!vTampil ? 'nol' : ''}"
-
-            ${!isAdmin ? 'disabled' : ''} 
-            style="width: 70px; height: 30px; background: #0f172a; border: 1px solid #334155; color: #fff; text-align: center; border-radius: 6px; font-size: 12px; margin: 0 auto; display: block;" 
-            onkeydown="if(event.key==='Enter'){ this.blur(); }"
-            <input type="text" 
-    class="input-tabungan"
-    value="${vTampil ? formatRupiah(vTampil) : ''}" 
-    placeholder="${vTampil ? '' : '✖'}"
-    ${!isAdmin ? 'disabled' : ''} 
-    style="width: 70px; height: 30px; background: #0f172a; border: 1px solid #334155; color: #fff; text-align: center; border-radius: 6px; font-size: 12px; margin: 0 auto; display: block;" 
-    
-    onfocus="this.placeholder=''"
-    
-    onblur="
-if(!this.value){
-    this.value='0';
-}
-let angka = this.value.replace(/\\./g,'');
-this.classList.toggle('nol', angka == 0);
-"
-    onchange="
-        let valMurni = this.value.replace(/\\./g,''); 
-        updVal('tabungan', ${ri}, ${i}, valMurni ? parseInt(valMurni) : 0)
-    ">
+        inputmode="numeric" 
+        pattern="[0-9.]*" 
+        value="${vTampil ? formatRupiah(vTampil) : '0'}"
+        class="input-tabungan ${!vTampil ? 'nol' : ''}" 
+        ${!isAdmin ? 'disabled' : ''} 
+        style="width: 70px; height: 30px; background: #0f172a; border: 1px solid #334155; color: #fff; text-align: center; border-radius: 6px; font-size: 12px; margin: 0 auto; display: block;" 
+        
+        onfocus="if(this.value === '0') this.value = ''" 
+        onblur="if(this.value === '') this.value = '0'; updVal('tabungan',${ri},${i},this.value.replace(/\\./g,''))">
     </td>`;
 }
-            else {
-                h += `<td style="color:${v<0?'#ef4444':v>0?'#22c55e':'#444'}; font-weight:bold;">${v!==0?v.toLocaleString():'-'}</td>`;
-            }
+        else {
+            h += `<td style="color:${v<0?'#ef4444':v>0?'#22c55e':'#444'}; font-weight:bold;">${v!==0?v.toLocaleString():'-'}</td>`;
         }
-        gTot += rS;
-        h += `<td class="st-right">Rp. ${rS.toLocaleString()}</td></tr>`;
-    });
+    }
 
+    gTot += rS;
+
+    // --- PERUBAHAN TAMPILAN KOLOM TOTAL ---
+    if (type === 'tabungan' && !r.nama.startsWith("OUT:")) {
+        h += `<td class="st-right" style="line-height: 1.2; padding: 5px 8px;">
+                <div style="font-size: 10px; color: var(--accent-green);">Bln: ${rS.toLocaleString()}</div>
+                <div style="font-size: 11px; color: var(--accent-gold); border-top: 1px solid rgba(212,175,55,0.2); margin-top: 3px; padding-top: 3px;">Total: ${totalGabungan.toLocaleString()}</div>
+              </td></tr>`;
+    } else {
+        h += `<td class="st-right">Rp. ${rS.toLocaleString()}</td></tr>`;
+    }
+});
+    
     h += `</tbody>`;
     const navHeight = "70px"; 
 
@@ -1608,7 +1596,7 @@ function handleLoadData(event) {
         try {
             const data = JSON.parse(e.target.result);
             db = data;
-            saveDb();
+            save();
             renderAll();
             alert("Data Berhasil Dimuat!");
         } catch (err) {
